@@ -6,12 +6,12 @@ Blockchain applicatie met REDIS persistence
 Publish & Subscribe mechanisme voor PEER to PEER communicatie
 ```
 
-# Installatie
+## Installatie
 > npm install
 
-# Starten als ROOT node
+## Starten als ROOT node
 > npm run dev-root
 
-# Starten als SUB node
+## Starten als SUB node
 > npm run dev-peer
 
