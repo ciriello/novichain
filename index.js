@@ -16,7 +16,6 @@ const TransactionPool = require('./app/transaction/transaction-pool');
 const Wallet = require('./app/wallet');
 const PublishSubscribeManager = require('./app/pubsubmanager');
 const Miner = require('./app/miner');
-const Synchronizer = require('./app/sync');
 
 const app = express();
 
@@ -26,7 +25,6 @@ const wallet = new Wallet();
 const transactionPool = new TransactionPool();
 const pubSubManager = new PublishSubscribeManager({ blockchain, transactionPool })
 const miner = new Miner({ blockchain, wallet, transactionPool, pubSubManager});
-const synchronizer = new Synchronizer({ blockchain, transactionPool })
 
 // De webapplicatie Routers
 const blockchainRouter = require('./app/blockchain/router')({
@@ -74,9 +72,6 @@ app.use('/api/wallet', walletRouter);
 
 // Error Handler als er een onbekende request aangevraagd wordt
 app.use('*', errorRouter);
-
-// Synchronisatie als de node voor het eerst start, synchroniseert deze met de ROOT node
-synchronizer.sync({ root_node_address: ROOT_NODE_ADRES });
 
 // start de NODE. Er is een ROOT of CLIENT node configureerbaar
 app.listen(NODE_POORT, () => {

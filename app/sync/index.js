@@ -21,12 +21,32 @@ class Synchronizer {
         request({ url: `${root_node_address}/api/blocks` }, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 const rootChain = JSON.parse(body);
-    
-                console.log('replace local chain with incoming chain ', rootChain);
                 this.blockchain.updateLocalChain(rootChain);
             }
         });
     
+        request({ url: `${root_node_address}/api/transaction`}, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                const rootTransactionPoolMap = JSON.parse(body);
+    
+                console.log('replace local transaction pool with incoming transaction pool', rootTransactionPoolMap);
+                this.transactionPool.setMap(rootTransactionPoolMap);
+            }
+        });
+    }
+
+    syncChain({ root_node_address, blockchain }) {
+        let lastBlock = blockchain.chain[blockchain.chain.length-1];
+        console.log('lastBlock:', lastBlock);
+        request({ url: `${root_node_address}/api/blocks` }, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                const rootChain = JSON.parse(body);
+                this.blockchain.updateLocalChain(rootChain);
+            }
+        });
+    }
+
+    syncTransactionPool({ root_node_address, transactionPool }) {
         request({ url: `${root_node_address}/api/transaction`}, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 const rootTransactionPoolMap = JSON.parse(body);

@@ -12,17 +12,31 @@ const Block = require('./block');
 const Wallet = require('../wallet')
 const Transaction = require('../transaction');
 const PersistenceStore = require('../persistence');
+const Synchronizer = require('../sync');
 
 const { hasher } = require('../crypto');
+const ROOT_NODE_POORT = 3000;
+const ROOT_NODE_ADRES = `http://localhost:${ROOT_NODE_POORT}`; // rootnode url
 
 class Blockchain {
     constructor() {
-        this.chain = [Block.generateGenesisBlock()];
+        this.chain = [];
         this.persistence = new PersistenceStore();
+        // Herstel de blockchain vanuit de persistence store.
+        // indien er geen data in de persistence store aanwezig
+        // creeer de genesis block
+        const synchronizer = new Synchronizer({ blockchain: this, transactionPool: null });
         this.persistence.fetchAll({ endingKey: '', index: 0 })
             .then(res => {
-                console.log('## RESTORING LOCAL CHAIN FROM REDIS ##');
-                this.chain.push(res);
+                this.chain.push(...res);
+                synchronizer.syncChain({ root_node_address: ROOT_NODE_ADRES, blockchain: this });
+            })
+            .catch(err => {
+                const genesisBlock = Block.generateGenesisBlock();
+                this.chain.push(genesisBlock);
+                this.persistence.store({newBlock: genesisBlock});
+                synchronizer.syncChain({ root_node_address: ROOT_NODE_ADRES, blockchain: this });
+                //console.log('promise rejected with: ', err);
             });
     }
 
@@ -32,10 +46,9 @@ class Blockchain {
             lastBlock,
             data
         });
-
+        this.chain.push(newBlock);
         // Asynchrone functie. Wacht tot uitvoer is voltooid
         await this.persistence.store({newBlock});
-        this.chain.push(newBlock);
     }
 
     updateLocalChain(chain, successCallback) {
@@ -57,11 +70,14 @@ class Blockchain {
         if (successCallback) successCallback();
         console.log('lokale chain wordt vervangen ', chain);
         this.chain = chain;
+        this.persistence.replace({chain});
     }
 
     hasValidData({ chain }) {
+        const validateChain = [...chain]
+        validateChain.push(chain);
         for (let i=1; i<chain.length; i++) {
-            const block = chain[i];
+            const block = validateChain[i];
             const uniqueTransactions = new Set();
 
             for(let transaction of block.data) {
@@ -70,14 +86,14 @@ class Blockchain {
                     return false;
                 }
 
-                const actualKilowatts = Wallet.calculateKilowatts({
-                    chain: this.chain,
-                    address: transaction.sender.address
-                });
-                if (transaction.sender.kilowatt !== actualKilowatts) {
-                    console.error('Ongeldige kilowatt sender');
-                    return false;
-                }
+                // const actualKilowatts = Wallet.calculateKilowatts({
+                //     chain: this.chain,
+                //     address: transaction.sender.address
+                // });
+                // if (transaction.sender.kilowatt !== actualKilowatts) {
+                //     console.error('Ongeldige kilowatt sender');
+                //     return false;
+                // }
 
                 if(uniqueTransactions.has(transaction)) {
                     console.error('Transactie is niet unique, transactie moet uniek zijn.');

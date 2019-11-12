@@ -30,6 +30,7 @@ const redis = require('redis');
 const PUBSUB_CHANNELS = {
     BLOCKCHAIN_CHANNEL: 'BLOCKCHAIN_CHANNEL',
     TRANSACTION_CHANNEL: 'TRANSACTION_CHANNEL',
+    BLOCK_CHANNEL: 'BLOCK_CHANNEL',
     MINER_CHANNEL: 'MINER_CHANNEL',
     SYNC_CHANNEL: 'SYNC_CHANNEL',
 };
@@ -49,7 +50,7 @@ class PublishSubscribeManager {
     }
 
     processMessage(channel, message) {
-        console.log(`Message received. Channel: ${channel}. Message: ${message}`);
+        console.log(`Message received. Channel: ${channel}.`);
 
         const parsedMessageJSON = JSON.parse(message);
 
@@ -97,6 +98,13 @@ class PublishSubscribeManager {
         this.publish({
             channel: PUBSUB_CHANNELS.TRANSACTION_CHANNEL,
             message: JSON.stringify(transaction)
+        });
+    }
+
+    broadcastBlock(block) {
+        this.publish({
+            channel: PUBSUB_CHANNELS.BLOCK_CHANNEL,
+            message: JSON.stringify(block)
         });
     }
 }

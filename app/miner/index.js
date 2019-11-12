@@ -20,12 +20,12 @@ class Miner {
         this.pubSubManager = pubSubManager;
     }
     
-    mine() {
+    async mine() {
         const validTransactions = this.transactionPool.validTransactions();
 
         if (validTransactions.length === 0) return;
 
-        this.blockchain.addBlock({ data: validTransactions });
+        await this.blockchain.addBlock({ data: validTransactions });
 
         this.pubSubManager.broadcastChain();
 

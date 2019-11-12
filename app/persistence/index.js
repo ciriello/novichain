@@ -18,6 +18,15 @@ class PersistenceStore {
     constructor() {
         this._keySet = [];
         this.redisClient = redis.createClient();
+        // voor demo doeleinde wordt hier een andere database geselecteerd
+        // in productie situatie niet nodid, daar elke node een eigen redis
+        // instantie heeft
+        if (process.env.RANDOM_NODE_PORT) {
+            this.redisClient.select(5, (err, reply) => {
+                if (err) return console.error('error by redis:', err);
+                console.log('reply by redis:', reply);
+            })
+        }
     }
 
     /** ASYNC functie. Slaat de nieuwe block op in de DATABASE */
@@ -33,7 +42,6 @@ class PersistenceStore {
                     console.error('error by redis: ', err);
                     return reject(err);
                 }
-                console.log('reply:', reply);
                 /** Bewaar de KEY van de nieuwe block in de KEYS list als eerste in de list (reverse order list) */
                 this.redisClient.lpush(HASH_SET, hash, (err, reply) => {
                     if (err) {
@@ -44,6 +52,15 @@ class PersistenceStore {
                 });                
             });
         });
+    }
+
+    replace({ chain }) {
+        for (let i=0; i<chain.length; i++) {
+            const block = chain[i];
+            const { hash } = block;
+            const stringifiedBlock = JSON.stringify(block);
+            this.redisClient.set(hash, stringifiedBlock);
+        }
     }
 
     fetch({ key }) {
@@ -58,19 +75,23 @@ class PersistenceStore {
         });
     }
 
-    /**
-     * Recursieve functie.
-     * Haalt in blokken van 10 hash waardes op van de laatst toegevoegde blocks
-     * totdat de laatst bekende hash waarde van een block bereikt is.
-     * 
-     * @param {endingKey, index} endingKey de laatse hashwaarde bekend bij de NODE, index volgende cursor set
-     */
     fetchAll({ endingKey, index = 0 }) {
         return new Promise((resolve, reject) => {
             this._recursiveFetch({ endingKey, index, resolve, reject });
         });
     }
 
+    /**
+     * Recursieve functie. ( The Magic Happends here :) )
+     * Haalt in blokken van 10, hashwaardes (de keys) van de laatste toegevoegde blocks op.
+     * totdat de laatst bekende hashwaarde van een het laatste block, gevonden wordt.
+     * 
+     * De REDIS database slaat elke geminde block  op. De hash van dit block word ook
+     * opgeslagen. Alle hashes van de blocken worden in een lijst opgeslagen in omgekeerde volgorde
+     * zodat de laatste, als eerste in deze lijst staat. 
+     * 
+     * @param {endingKey, index} endingKey de laatse hashwaarde bekend bij de NODE, index volgende cursor set
+     */
     _recursiveFetch({ endingKey, index = 0, resolve, reject }) {
         this.redisClient.lrange(HASH_SET, index, index + 10, (err, reply) => {
             if (err) {
@@ -82,6 +103,10 @@ class PersistenceStore {
                 index += reply.length;
                 this._recursiveFetch({ endingKey, index, resolve, reject })
             } else {
+
+                if (this._keySet.length == 0) return reject("no items found")
+                
+                // fetch all blocks, using the retrieved keyset
                 console.log('TOTAL KEYS FETCHED: ', this._keySet);
                 this.redisClient.mget(...this._keySet, (err, reply) => {
                     if (err) {
