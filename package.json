@@ -1,0 +1,35 @@
+{
+  "name": "novichain",
+  "version": "1.0.0",
+  "description": "Eindopdracht module Blockchain - HBO Software Development NOVI Hogeschool Utrecht.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --watchAll",
+    "start": "node index.js",
+    "dev-root": "cross-env-file nodemon index.js",
+    "dev-peer": "cross-env-file cross-env RANDOM_NODE_PORT='true' nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Student: V. Ciriello. Studentnr: 800008924",
+  "license": "ISC",
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "elliptic": "^6.5.1",
+    "express": "^4.17.1",
+    "hex-to-binary": "^1.0.1",
+    "lodash": "^4.17.15",
+    "pubnub": "^4.27.0",
+    "redis": "^2.8.0",
+    "request": "^2.88.0",
+    "uuid": "^3.3.3"
+  },
+  "devDependencies": {
+    "cross-env": "^6.0.3",
+    "cross-env-file": "^1.0.0",
+    "jest": "^24.9.0",
+    "nodemon": "^1.19.4"
+  }
+}
