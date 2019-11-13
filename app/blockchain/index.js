@@ -12,6 +12,7 @@ const Block = require('./block');
 const Wallet = require('../wallet')
 const Transaction = require('../transaction');
 const PersistenceStore = require('../persistence');
+const { GENESIS_HASH } = require('../config');
 const Synchronizer = require('../sync');
 
 const { hasher } = require('../crypto');
@@ -22,22 +23,26 @@ class Blockchain {
     constructor() {
         this.chain = [];
         this.persistence = new PersistenceStore();
-        // Herstel de blockchain vanuit de persistence store.
-        // indien er geen data in de persistence store aanwezig
-        // creeer de genesis block
-        const synchronizer = new Synchronizer({ blockchain: this, transactionPool: null });
-        this.persistence.fetchAll({ endingKey: '', index: 0 })
-            .then(res => {
-                this.chain.push(...res);
-                synchronizer.syncChain({ root_node_address: ROOT_NODE_ADRES, blockchain: this });
+        this.synchronizer = new Synchronizer({ blockchain: this, transactionPool: null });
+        this.addGenesisBlock();
+        // Haal het laatste block op en kopieer naar het geheugen.
+        this.persistence.fetchLast()
+            .then(lastBlock => {
+                console.log('######### LAST BLOCK ', lastBlock);
+                const { hash } = lastBlock;
+                if (hash) {
+                    this.synchronizer.syncChain({ root_node_address: ROOT_NODE_ADRES, hash });
+                }
             })
             .catch(err => {
-                const genesisBlock = Block.generateGenesisBlock();
-                this.chain.push(genesisBlock);
-                this.persistence.store({newBlock: genesisBlock});
-                synchronizer.syncChain({ root_node_address: ROOT_NODE_ADRES, blockchain: this });
-                //console.log('promise rejected with: ', err);
+                console.log('######### LAST BLOCK ERROR ', err);
             });
+    }
+
+    addGenesisBlock() {
+        const genesis = Block.generateGenesisBlock();
+        this.chain = [genesis];
+        this.persistence.store({ newBlock: genesis });
     }
 
     async addBlock({ data }) {
@@ -49,6 +54,18 @@ class Blockchain {
         this.chain.push(newBlock);
         // Asynchrone functie. Wacht tot uitvoer is voltooid
         await this.persistence.store({newBlock});
+    }
+
+    senderChain({ address }) {
+        return this.persistence.fetchByAddress({ address });
+    }
+
+    fullChain({ lastKnownHash = GENESIS_HASH }) {
+        return this.persistence.fetchAll({ endingKey: lastKnownHash });
+    }
+
+    lastBlock() {
+        return this.persistence.fetchLast();
     }
 
     updateLocalChain(chain, successCallback) {

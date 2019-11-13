@@ -35,10 +35,8 @@ class Synchronizer {
         });
     }
 
-    syncChain({ root_node_address, blockchain }) {
-        let lastBlock = blockchain.chain[blockchain.chain.length-1];
-        console.log('lastBlock:', lastBlock);
-        request({ url: `${root_node_address}/api/blocks` }, (error, response, body) => {
+    syncChain({ root_node_address, hash }) {
+        request({ url: `${root_node_address}/api/blocks/sync/${hash}` }, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 const rootChain = JSON.parse(body);
                 this.blockchain.updateLocalChain(rootChain);
