@@ -46,21 +46,22 @@ class Blockchain {
     }
 
     async addBlock({ data }) {
-        const lastBlock = this.chain[this.chain.length-1];
-        const newBlock = Block.mineBlock({
-            lastBlock,
-            data
-        });
-        this.chain.push(newBlock);
-        // Asynchrone functie. Wacht tot uitvoer is voltooid
-        await this.persistence.store({newBlock});
+        this.persistence.fetchLast()
+            .then(async lastBlock => {
+                const newBlock = Block.mineBlock({
+                    lastBlock,
+                    data
+                });
+                this.chain.push(newBlock);
+                await this.persistence.store({newBlock});
+            });
     }
 
     senderChain({ address }) {
         return this.persistence.fetchByAddress({ address });
     }
 
-    fullChain(lastKnownHash = GENESIS_HASH) {
+    fullChain(lastKnownHash = '') {
         return this.persistence.fetchAll({ endingKey: lastKnownHash });
     }
 
@@ -69,26 +70,32 @@ class Blockchain {
     }
 
     updateLocalChain(chain, successCallback) {
-        console.log('## NEW INCOMING CHAIN ', chain);
-        if (chain.length <= this.chain.length) {
-            console.error('Lokale chain wordt alleen geupdate als de nieuwe chain langer is');
-            return;
-        }
+        this.fullChain()
+            .then(currentChain => {
 
-        if (!Blockchain.isValid(chain)) {
-            console.error('Lokale chain wordt alleen vervangen als de nieuwe chain geldig is');
-            return;
-        }
+                let toBeChain = [...currentChain];
+                toBeChain.push(...chain);
 
-        if (!this.hasValidData({ chain })) {
-            console.error('Lokale chain wordt alleen vervangen als de chain data geldig is');
-            return;
-        }
+                if (chain.length + currentChain.length <= currentChain.length) {
+                    console.error('Lokale chain wordt alleen geupdate als de nieuwe chain langer is');
+                    return;
+                }
 
-        if (successCallback) successCallback();
-        console.log('Lokale chain wordt vervangen ', chain);
-        this.chain = chain;
-        this.persistence.replace({chain});
+                if (!Blockchain.isValid(toBeChain)) {
+                    console.error('Lokale chain wordt alleen vervangen als de nieuwe chain geldig is');
+                    return;
+                }
+        
+                if (!this.hasValidData({ chain: toBeChain })) {
+                    console.error('Lokale chain wordt alleen vervangen als de chain data geldig is');
+                    return;
+                }
+        
+                if (successCallback) successCallback();
+                console.log('Lokale chain wordt vervangen ', toBeChain);
+                this.chain = chain;
+                this.persistence.replace({chain});
+            });
     }
 
     hasValidData({ chain }) {
@@ -104,15 +111,6 @@ class Blockchain {
                     return false;
                 }
 
-                // const actualKilowatts = Wallet.calculateKilowatts({
-                //     chain: this.chain,
-                //     address: transaction.sender.address
-                // });
-                // if (transaction.sender.kilowatt !== actualKilowatts) {
-                //     console.error('Ongeldige kilowatt sender');
-                //     return false;
-                // }
-
                 if(uniqueTransactions.has(transaction)) {
                     console.error('Transactie is niet unique, transactie moet uniek zijn.');
                     return false;
@@ -126,6 +124,7 @@ class Blockchain {
     }
 
     static isValid(chain) {
+        console.log('start chain validatie');
         /**
          * Validation rule: 1
          * Eerste block MOET een genesis block zijn?
@@ -133,6 +132,7 @@ class Blockchain {
         if (JSON.stringify(Block.generateGenesisBlock()) !== JSON.stringify(chain[0])) {
             return false;
         };
+        console.log('validation rule 1 is geldig');
 
         // LOOP over ALLE blocks in the CHAIN
         for (let i = 1; i < chain.length; i++) {
@@ -144,7 +144,7 @@ class Blockchain {
              */
             const previousBlockHash = chain[i-1].hash;
             if (lastHash !== previousBlockHash) return false;
-
+            console.log('validation rule 2 is geldig');
 
             /**
              * Validation rule: 3
@@ -152,6 +152,7 @@ class Blockchain {
              */
             const actualHash = hasher(lastHash, nonce, difficulty, data, timestamp);
             if (hash !== actualHash) return false;
+            console.log('validation rule 3 is geldig');
 
             /**
              * Validation rule: 4
@@ -160,6 +161,7 @@ class Blockchain {
             const previousDifficulty = chain[i-1].difficulty;
             const diff = Math.abs(previousDifficulty - difficulty);
             if (diff > 1) return false;
+            console.log('validation rule 4 is geldig');
         }
         return true;
     }

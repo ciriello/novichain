@@ -174,8 +174,15 @@ class PersistenceStore {
             } else {
                 keySet.push(...keys);
                 if (keySet.length == 0) return resolve([]);
+                // remove keys after known keys
+                console.log('splincing from key ', endingKey);
+                const idx = keySet.indexOf(endingKey);
+                if (idx > -1) {
+                    keySet.splice(idx);
+                }
                 // fetch all blocks, using the retrieved keyset
                 console.log('TOTAL KEYS FETCHED: ', keySet);
+                if (keySet.length === 0) return resolve([]);
                 this.redisClient.mget(...keySet, (err, blocks) => {
                     if (err) {
                         console.error('error by redis: ', err);
