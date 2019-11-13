@@ -137,7 +137,6 @@ class Blockchain {
         if (JSON.stringify(Block.generateGenesisBlock()) !== JSON.stringify(chain[0])) {
             return false;
         };
-        console.log('validation rule 1 is geldig');
 
         // LOOP over ALLE blocks in the CHAIN
         for (let i = 1; i < chain.length; i++) {
@@ -149,7 +148,6 @@ class Blockchain {
              */
             const previousBlockHash = chain[i-1].hash;
             if (lastHash !== previousBlockHash) return false;
-            console.log('validation rule 2 is geldig');
 
             /**
              * Validation rule: 3
@@ -157,7 +155,6 @@ class Blockchain {
              */
             const actualHash = hasher(lastHash, nonce, difficulty, data, timestamp);
             if (hash !== actualHash) return false;
-            console.log('validation rule 3 is geldig');
 
             /**
              * Validation rule: 4
@@ -166,7 +163,6 @@ class Blockchain {
             const previousDifficulty = chain[i-1].difficulty;
             const diff = Math.abs(previousDifficulty - difficulty);
             if (diff > 1) return false;
-            console.log('validation rule 4 is geldig');
         }
         return true;
     }
