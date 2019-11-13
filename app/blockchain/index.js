@@ -45,8 +45,9 @@ class Blockchain {
         this.persistence.store({ newBlock: genesis });
     }
 
-    async addBlock({ data }) {
-        this.persistence.fetchLast()
+    addBlock({ data }) {
+        return new Promise((resolve, reject) => {
+            this.persistence.fetchLast()
             .then(async lastBlock => {
                 const newBlock = Block.mineBlock({
                     lastBlock,
@@ -54,7 +55,9 @@ class Blockchain {
                 });
                 this.chain.push(newBlock);
                 await this.persistence.store({newBlock});
+                resolve(newBlock);
             });
+        });
     }
 
     senderChain({ address }) {
@@ -72,6 +75,8 @@ class Blockchain {
     updateLocalChain(chain, successCallback) {
         this.fullChain()
             .then(currentChain => {
+
+                console.log('new chain ', chain);
 
                 let toBeChain = [...currentChain];
                 toBeChain.push(...chain);

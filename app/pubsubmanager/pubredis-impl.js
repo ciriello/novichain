@@ -88,7 +88,9 @@ class PublishSubscribeManager {
     }
 
     broadcastChain() {
+        console.log('broadcast chain ', this.blockchain.chain);
         const lastBlock = [this.blockchain.chain[this.blockchain.chain.length-1]];
+        console.log('broadcast last block ', lastBlock);
         this.publish({
             channel: PUBSUB_CHANNELS.BLOCKCHAIN_CHANNEL,
             message: JSON.stringify(lastBlock),

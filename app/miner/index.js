@@ -25,7 +25,7 @@ class Miner {
 
         if (validTransactions.length === 0) return;
 
-        await this.blockchain.addBlock({ data: validTransactions });
+        const result = await this.blockchain.addBlock({ data: validTransactions });
 
         this.pubSubManager.broadcastChain();
 
