@@ -12,7 +12,7 @@
 */
 
 const redis = require('redis');
-const HASH_SET = 'block_hashes_ordered_reversed';
+const HASH_SET = 'REVERSE_ORDER_BLOCK_KEYS';
 
 class PersistenceStore {
     constructor() {
@@ -29,7 +29,12 @@ class PersistenceStore {
         }
     }
 
-    /** ASYNC functie. Slaat de nieuwe block op in de DATABASE */
+    /** 
+     * ASYNC functie. Slaat de nieuwe block op in de DATABASE
+     * als dat succesvol is wordt ook de index e.d. bijgewerkt.
+     * als alles succesvol is. Is de async functie voltooid.
+     * Anders komt de async functie terug met een error.
+     */
     store({ newBlock }) {
         return new Promise((resolve, reject) => {
             const { hash } = newBlock;
@@ -37,32 +42,34 @@ class PersistenceStore {
 
             /** Voeg de nieuwe BLOCK toe aan de database */
             this.redisClient.set(hash, stringifiedBlock, (err, reply) => {
-                // bij een error wordt de Promise gereject.
+                // bij een error wordt de Promise gereject. Hier eindigt de transactie
                 if (err) {
                     console.error('error by redis: ', err);
                     return reject(err);
                 }
                 /** Bewaar de KEY van de nieuwe block in de KEYS list als eerste in de list (reverse order list) */
-                this.redisClient.lpush(HASH_SET, hash, (err, reply) => {
-                    if (err) {
-                        console.error('error by redis', err);
-                        return reject(err);
-                    }
-                    resolve(reply);
-                });                
+                this._storeBlockKey({ reject, resolve, block: newBlock });
             });
         });
     }
 
+    /**
+     * Update alle blocks in de database met de huidige blocks in memory
+     */
     replace({ chain }) {
         for (let i=0; i<chain.length; i++) {
             const block = chain[i];
             const { hash } = block;
             const stringifiedBlock = JSON.stringify(block);
             this.redisClient.set(hash, stringifiedBlock);
+            this._storeSenderIndex({ block: block });
         }
     }
 
+    /**
+     * Ophalen van een block op basis van een block-key (hash)
+     * @param {key} param0 hash van een block om op te halen
+     */
     fetch({ key }) {
         this.redisClient.get(key, (err, reply) => {
             if (err) {
@@ -75,6 +82,12 @@ class PersistenceStore {
         });
     }
 
+    /**
+     * Haalt de volledige blockchain lijst op tot de 'endingKey' hash van een block
+     * bereikt/gevonden is.
+     * 
+     * @param {endingKey, index} param0 endingKey = hash van het laatst bekende blok, index start positie default 0
+     */
     fetchAll({ endingKey, index = 0 }) {
         return new Promise((resolve, reject) => {
             this._recursiveFetch({ endingKey, index, resolve, reject });
@@ -129,6 +142,30 @@ class PersistenceStore {
                 });
             }
         });
+    }
+
+    /** 
+     * Bewaar de KEY van de nieuwe block in de KEYS list als eerste in de list (reverse order list) 
+     */
+    _storeBlockKey({reject, resolve, block}) {
+        const { hash } = block;
+        this.redisClient.lpush(HASH_SET, hash, (err, reply) => {
+            if (err) {
+                console.error('error by redis', err);
+                return reject(err);
+            }
+            this._storeSenderIndex({ block });
+            resolve(reply);
+        }); 
+    }
+
+    _storeSenderIndex({ block }) {
+        // deconstruct de hash en de sender uit het block object
+        const { hash, data } = block;
+        for (let transaction of data) {
+            const key = 'sender:' + transaction.sender.address;
+            this.redisClient.sadd(key, hash);
+        }
     }
 }
 
