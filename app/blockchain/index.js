@@ -60,7 +60,7 @@ class Blockchain {
         return this.persistence.fetchByAddress({ address });
     }
 
-    fullChain({ lastKnownHash = GENESIS_HASH }) {
+    fullChain(lastKnownHash = GENESIS_HASH) {
         return this.persistence.fetchAll({ endingKey: lastKnownHash });
     }
 
@@ -69,23 +69,24 @@ class Blockchain {
     }
 
     updateLocalChain(chain, successCallback) {
+        console.log('## NEW INCOMING CHAIN ', chain);
         if (chain.length <= this.chain.length) {
-            console.error('Locale chain wordt alleen geupdate als de nieuwe chain langer is');
+            console.error('Lokale chain wordt alleen geupdate als de nieuwe chain langer is');
             return;
         }
 
         if (!Blockchain.isValid(chain)) {
-            console.error('Locale chain wordt alleen vervangen als de nieuwe chain geldig is');
+            console.error('Lokale chain wordt alleen vervangen als de nieuwe chain geldig is');
             return;
         }
 
         if (!this.hasValidData({ chain })) {
-            console.error('Locale chain wordt alleen vervangen als de chain data geldig is');
+            console.error('Lokale chain wordt alleen vervangen als de chain data geldig is');
             return;
         }
 
         if (successCallback) successCallback();
-        console.log('lokale chain wordt vervangen ', chain);
+        console.log('Lokale chain wordt vervangen ', chain);
         this.chain = chain;
         this.persistence.replace({chain});
     }

@@ -39,7 +39,9 @@ module.exports = ({ blockchain }) => {
 
     // Sync SUB nodes vanaf laatste bekende hash
     router.get('/sync/:hash', async (req, res) => {
-        res.json(await blockchain.fullChain({}))
+        const { hash } = req.params;
+        console.log('## SYNCHRONIZATION REQUEST UNTIL HASH ', hash);
+        res.json(await blockchain.fullChain(hash))
     });
     
     return router;
