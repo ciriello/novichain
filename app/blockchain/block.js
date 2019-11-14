@@ -35,7 +35,7 @@ class Block {
         const lastHash = lastBlock.hash;
 
         // CONCENSUS ALGORITHME
-        // genereer een HASH met n(difficulty) aantal voorloop nullen
+        // genereer een HASH met O(difficulty) aantal voorloop nullen
         do {
             nonce++;
             timestamp = Date.now();
