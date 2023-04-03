@@ -1,6 +1,8 @@
 # Novichain
 Blockchain applicatie t.b.v. Eindopdracht HBO Software Development - Hogeschool NOVI
 
+Een op eigen blockchain gebaseerde applicatie met data persistence in Redis. De blockchain app heeft een root node en meerdere subnodes. Als nodes uitvallen en/of weer opstarten wordt initieel alle data vanuit Redis ingeladen om de node weer tot de laatste status te synchroniseren
+
 ```
 Blockchain applicatie met REDIS persistence
 Publish & Subscribe mechanisme voor PEER to PEER communicatie
